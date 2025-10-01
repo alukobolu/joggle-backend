@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from urllib.parse import urlparse
 import os
 
 # Try to import decouple, fallback to os.environ if not available
@@ -42,7 +43,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dd42pl_n##41pc#b2pmx#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 
 # Application definition
@@ -68,7 +69,14 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+]
+
+# Optionally disable CSRF checks entirely (INSECURE). Defaulting to True per user request.
+DISABLE_CSRF = config('DISABLE_CSRF', default=True, cast=bool)
+if not DISABLE_CSRF:
+    MIDDLEWARE.append('django.middleware.csrf.CsrfViewMiddleware')
+
+MIDDLEWARE += [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -179,13 +187,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For developm
 DEFAULT_FROM_EMAIL = 'noreply@joggle.com'
 
 # CORS settings (for API access)
-# Configure your frontend origins as a comma-separated list in FRONTEND_ORIGINS
-FRONTEND_ORIGINS = config('FRONTEND_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080')
-CORS_ALLOWED_ORIGINS = [o.strip() for o in FRONTEND_ORIGINS.split(',') if o.strip()]
-# Optional: allow regex origins via CORS_ALLOWED_ORIGIN_REGEXES env (comma-separated)
-CORS_ALLOWED_ORIGIN_REGEXES = [r.strip() for r in config('CORS_ALLOWED_ORIGIN_REGEXES', default='', cast=str).split(',') if r.strip()]
-# Enable if you need to send cookies/authorization headers cross-site
-CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', default=False, cast=bool)
+# Allow all origins per user request (INSECURE in production)
+CORS_ALLOW_ALL_ORIGINS = True
+# Enable credentials if needed
+CORS_ALLOW_CREDENTIALS = True
 
 # Session settings
 SESSION_COOKIE_AGE = 86400  # 24 hours
@@ -193,13 +198,10 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 
 # CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    # Ensure HTTPS scheme in production
-    (o.replace('http://', 'https://') if not DEBUG and o.startswith('http://') else o)
-    for o in CORS_ALLOWED_ORIGINS
-]
-CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SAMESITE = 'None' if CORS_ALLOW_CREDENTIALS else 'Lax'
+if not DISABLE_CSRF:
+    CSRF_TRUSTED_ORIGINS = ['http://*', 'https://*']
+    CSRF_COOKIE_SECURE = not DEBUG
+    CSRF_COOKIE_SAMESITE = 'None' if CORS_ALLOW_CREDENTIALS else 'Lax'
 
 # Behind proxies (e.g. Railway), trust X-Forwarded-Proto for secure detection
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
