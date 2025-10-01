@@ -179,7 +179,13 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For developm
 DEFAULT_FROM_EMAIL = 'noreply@joggle.com'
 
 # CORS settings (for API access)
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080').split(',')
+# Configure your frontend origins as a comma-separated list in FRONTEND_ORIGINS
+FRONTEND_ORIGINS = config('FRONTEND_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080')
+CORS_ALLOWED_ORIGINS = [o.strip() for o in FRONTEND_ORIGINS.split(',') if o.strip()]
+# Optional: allow regex origins via CORS_ALLOWED_ORIGIN_REGEXES env (comma-separated)
+CORS_ALLOWED_ORIGIN_REGEXES = [r.strip() for r in config('CORS_ALLOWED_ORIGIN_REGEXES', default='', cast=str).split(',') if r.strip()]
+# Enable if you need to send cookies/authorization headers cross-site
+CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', default=False, cast=bool)
 
 # Session settings
 SESSION_COOKIE_AGE = 86400  # 24 hours
@@ -187,7 +193,16 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 
 # CSRF settings
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    # Ensure HTTPS scheme in production
+    (o.replace('http://', 'https://') if not DEBUG and o.startswith('http://') else o)
+    for o in CORS_ALLOWED_ORIGINS
+]
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'None' if CORS_ALLOW_CREDENTIALS else 'Lax'
+
+# Behind proxies (e.g. Railway), trust X-Forwarded-Proto for secure detection
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
