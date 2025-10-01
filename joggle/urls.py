@@ -22,14 +22,37 @@ from django.http import JsonResponse
 
 def health_check(request):
     """Simple health check endpoint for Railway"""
+    from django.conf import settings
     return JsonResponse({
         'status': 'healthy',
-        'message': 'Joggle API is running'
+        'message': 'Joggle API is running',
+        'debug': settings.DEBUG,
+        'database': settings.DATABASES['default']['ENGINE'].split('.')[-1],
+        'allowed_hosts': settings.ALLOWED_HOSTS
+    })
+
+def debug_info(request):
+    """Debug endpoint to help troubleshoot deployment issues"""
+    from django.conf import settings
+    import os
+    return JsonResponse({
+        'status': 'debug',
+        'django_debug': settings.DEBUG,
+        'database_engine': settings.DATABASES['default']['ENGINE'],
+        'allowed_hosts': settings.ALLOWED_HOSTS,
+        'installed_apps_count': len(settings.INSTALLED_APPS),
+        'environment_vars': {
+            'SECRET_KEY_set': bool(os.environ.get('SECRET_KEY')),
+            'DEBUG': os.environ.get('DEBUG'),
+            'USE_SQLITE': os.environ.get('USE_SQLITE'),
+            'DATABASE_URL_set': bool(os.environ.get('DATABASE_URL')),
+        }
     })
 
 urlpatterns = [
     path('', health_check, name='health_check'),
     path('health/', health_check, name='health_check_alt'),
+    path('debug/', debug_info, name='debug_info'),
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
     path('account/', include('account.urls')),

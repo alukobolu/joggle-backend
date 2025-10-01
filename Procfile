@@ -1,1 +1,1 @@
-web: bash railway_start.sh
+web: gunicorn joggle.wsgi --bind 0.0.0.0:$PORT --log-file - --access-logfile -

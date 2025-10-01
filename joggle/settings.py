@@ -12,8 +12,22 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-from decouple import config
-import dj_database_url
+
+# Try to import decouple, fallback to os.environ if not available
+try:
+    from decouple import config
+except ImportError:
+    # Fallback for environments where decouple is not available
+    def config(key, default=None, cast=None):
+        value = os.environ.get(key, default)
+        if cast and value is not None:
+            return cast(value)
+        return value
+
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -87,7 +101,7 @@ WSGI_APPLICATION = 'joggle.wsgi.application'
 DATABASE_URL = config('DATABASE_URL', default=None)
 USE_SQLITE = config('USE_SQLITE', default='auto', cast=str)
 
-if DATABASE_URL and USE_SQLITE.lower() != 'true':
+if DATABASE_URL and dj_database_url and USE_SQLITE.lower() != 'true':
     # Use PostgreSQL from Railway
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL)
