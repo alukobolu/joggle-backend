@@ -1,1 +1,1 @@
-web: gunicorn joggle.wsgi --log-file -
+web: bash railway_start.sh
