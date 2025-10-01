@@ -5,8 +5,6 @@
   },
   "deploy": {
     "startCommand": "gunicorn joggle.wsgi --bind 0.0.0.0:$PORT --log-file - --access-logfile -",
-    "healthcheckPath": "/",
-    "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
